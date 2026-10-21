@@ -165,6 +165,7 @@ Use the same response envelope for database, documents, hybrid, clarification, a
   - Implemented partial milestone: complete-passage character-budgeted context, document-selection gate, and structural citation identity validation. 42 unit tests and 8 live retrieval/context checks passed without Groq. Adjacent expansion, generation-token budgeting, claim support verification, and legal answer generation remain pending.
 - [ ] Phase 5: router, follow-up resolution, clarification, and hybrid composition.
 - [ ] Phase 6: conversation migrations, authenticated history/session APIs, bounded memory, idempotency, and isolation tests. Design ownership in Phase 1 even though persistence implementation follows retriever work.
+  - Implemented offline baseline: validated owner/conversation/message/summary contracts and contiguous bounded history context with account isolation and summary-boundary checks. See `CONVERSATION_HISTORY.md`. 63 offline tests passed. No persistent storage, migrations, history APIs, semantic follow-up resolution, or frontend history integration yet.
 - [ ] Phase 7: FastAPI integration, pooling, input limits, rate limiting, timeouts, errors, and readiness checks; verify current primary documentation when implementing dependencies/security behavior.
 - [ ] Phase 8: frontend live integration and history interface after API/auth contracts are verified. Remove preview labels only after live behavior works.
 - [ ] Phase 9: end-to-end evaluation, deployment configuration, production smoke tests, and documented limitations.
@@ -190,4 +191,4 @@ Use the same response envelope for database, documents, hybrid, clarification, a
 
 ## 13. Next execution milestone
 
-Phases 1 and the Phase 2 retrieval baseline are recorded in `READINESS.md` and `RETRIEVAL.md`. Next, design safe query planning and document context assembly with explicit readiness gates. Groq-dependent generation waits for restored credits; never restart book enrichment implicitly. Do not enable unrestricted SQL execution or pretend document coverage is complete.
+Readiness, retrieval, document context, offline query compilation, and offline history context are documented in their respective milestone files. Next, design conversation persistence migrations and controlled storage operations, then integrate verified identity and session APIs. Applying migrations remains a separately reported operational step. Groq-dependent generation waits for restored credits; never restart book enrichment implicitly. Do not enable unrestricted SQL execution or pretend document coverage is complete.
