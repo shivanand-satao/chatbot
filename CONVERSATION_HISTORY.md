@@ -44,6 +44,8 @@ This baseline expects the server to provide its complete selected page, includin
 
 ## Validation
 
+The later identity/history-service boundary is documented in `HISTORY_API.md`; its addition brings the current full offline suite to 105 passing tests. The service remains disabled by default, is not an HTTP server, and has not been exercised with real tokens or PostgreSQL. The 84-test figure below records the preceding storage milestone.
+
 84 offline tests passed across storage contracts, conversation context, query compilation, document context, retrieval, readiness, book parsing, and metadata indexing. This includes 21 repository/SQL-contract tests and 14 history-context tests. Repository tests use SQL-response mocks, not a database.
 
 Run from `D:\cc\chatbot`:

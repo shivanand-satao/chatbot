@@ -116,6 +116,10 @@ class ConversationStore:
                 ORDER BY updated_at DESC,id DESC LIMIT 1''',
                 (self.owner.account_kind, self.owner.account_id)).fetchone()
 
+    def get(self, conversation_id):
+        with self.transaction():
+            return self._owned(conversation_id)
+
     def messages(self, conversation_id, limit=50, before_sequence=None):
         page_limit(limit)
         if before_sequence is not None:
