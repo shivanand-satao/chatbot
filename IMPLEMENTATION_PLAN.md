@@ -157,7 +157,7 @@ Use the same response envelope for database, documents, hybrid, clarification, a
 
 - [x] Inspect existing indexing documentation, embedding helper, document migration, and frontend integration handoff.
 - [x] Record architecture and persistent-history requirements in this document.
-- [ ] Phase 1: read-only coverage, authentication, dependency, and database privilege audit. Report readiness without restarting indexing.
+- [x] Phase 1: preliminary read-only coverage, authentication-source, dependency, and database privilege audit. See `READINESS.md` and the local ignored `readiness-output/report.json`. Live token verification and restricted runtime-role testing remain integration gates; document coverage is incomplete. Indexing was not restarted.
 - [ ] Phase 2: independently tested dataset and document retrievers; curated retrieval evaluation set.
 - [ ] Phase 3: safe structured query planning, SQL validation/execution, and grounded database responses.
 - [ ] Phase 4: document context assembly, source validation, insufficient-evidence handling, and grounded legal research responses. Full coverage remains gated by authorized enrichment.
