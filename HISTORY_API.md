@@ -57,6 +57,8 @@ Primary documentation reviewed: Python 3.13 `http.client` (HTTPSConnection, sock
 
 ## Offline validation
 
+Subsequent local HTTP verification: `AUTH_INTEGRATION.md` records 10 passing loopback tests using real backend auth routes/JWTs and the Python verifier, but a fake database. This partially closes the transport integration gate only; real database/deployed authentication gates remain open. No production profile request or real token was used.
+
 Run from `D:\cc\chatbot`:
 
 ```powershell
