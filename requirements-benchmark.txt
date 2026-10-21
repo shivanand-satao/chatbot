@@ -1,0 +1,5 @@
+# Install torch separately using https://download.pytorch.org/whl/cpu
+transformers==5.20.2
+sentencepiece==0.2.2
+psutil==7.2.2
+pdfplumber==0.11.10

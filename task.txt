@@ -1,0 +1,425 @@
+# Build an AI Chatbot for Crime Records of India
+
+I want to build an AI-powered chatbot for my existing **Crime Records of India** application using FastAPI, PostgreSQL, pgvector, and an LLM.
+
+I have completed the existing login, authentication, and admin functionalities. I have created a new folder named `chatboth`, where you can create and modify all files required for the chatbot backend.
+
+**Before implementing anything, inspect the existing `backend` and `frontend` folders.** They contain important information about API endpoints, database schemas, authentication, dataset information, frontend components, filtering, pagination, and visualizations. Reuse the existing APIs, business logic, and components wherever appropriate instead of unnecessarily rebuilding them.
+
+The chatbot must support regular users and administrators and allow them to obtain insights from crime datasets and official documents through natural-language conversations.
+
+## 1. Technology Stack
+
+Use the following technologies:
+
+- FastAPI for the chatbot backend.
+- PostgreSQL for database storage.
+- pgvector for embedding storage and similarity search.
+- An appropriate embedding model for text embeddings.
+- An LLM for intent classification, dynamic SQL generation, and answer synthesis.
+- Pydantic for request and response validation.
+- SQLAlchemy or an appropriate PostgreSQL driver.
+- Alembic for chatbot-specific database migrations, where appropriate.
+
+Keep the implementation modular, maintainable, secure, and suitable for independent deployment.
+
+## 2. Inspect the Existing Project
+
+Before writing code, inspect:
+
+- The existing `backend` and `frontend` folders.
+- All relevant API endpoints and response formats.
+- The actual PostgreSQL database schema.
+- Existing crime dataset tables, columns, and data types.
+- Existing authentication, JWT verification, and role-based access.
+- Existing APIs for datasets, filters, pagination, and aggregations.
+- Existing frontend table and chart components.
+- The location and format of the official books and documents.
+- Existing environment variables and deployment configuration.
+
+Treat the actual source code and database schema as the source of truth.
+
+Do not assume that a particular table, API, column, document, or embedding already exists. Verify what is available before implementing the solution.
+
+## 3. Generate All Embeddings From Scratch
+
+**Currently, there are no embeddings for either dataset metadata or document content. You must generate all required embeddings yourself.**
+
+Use the existing PostgreSQL database and pgvector. Keep the chatbot-specific tables separate from the existing crime datasets and authentication tables.
+
+Store both the original human-readable text and its corresponding embedding vector in PostgreSQL. I want to inspect the original text to verify whether the embeddings represent the correct information.
+
+Do not store embeddings alone.
+
+Implement reusable embedding services, configurable model settings, indexing commands, duplicate detection, and incremental re-indexing. Do not regenerate every embedding whenever the server starts or a user sends a message.
+
+Ensure that the embedding model, vector dimensions, and similarity-search configuration are compatible.
+
+## 4. Dataset Metadata Embedding Pipeline
+
+Create a dedicated vector index describing the existing crime datasets.
+
+First, discover all relevant analytical tables and inspect their actual schemas.
+
+For each dataset, generate descriptive metadata containing:
+
+- Table name and purpose.
+- Semantic summary.
+- Column names and descriptions.
+- Column data types and measurement units.
+- Available years and geographic coverage, where applicable.
+- Crime categories and other relevant dimensions.
+- Verified relationships between tables.
+- Known data limitations.
+- Example questions that the dataset can answer.
+
+Use existing descriptions in the project where available. Generate missing descriptions using actual schema information, and inspect limited data samples only when necessary.
+
+Do not invent column meanings, table relationships, or available years.
+
+Convert the metadata into meaningful text and generate embeddings for the relevant tables and columns.
+
+Store the following in PostgreSQL:
+
+- Dataset table name.
+- Metadata type.
+- Original descriptive text.
+- Embedding vector.
+- Embedding model identifier.
+- Content hash and timestamps.
+
+Use pgvector to retrieve relevant tables and columns when a user asks a question.
+
+Implement commands to build the initial metadata index, inspect indexing status, and update embeddings when the schema or metadata changes.
+
+## 5. Document Embedding and RAG Pipeline
+
+I have approximately four to five official crime-related books or documents.
+
+Locate the existing documents by inspecting the project and available source locations. Do not assume that the files are already extracted or embedded.
+
+Implement the complete document ingestion pipeline:
+
+1. Extract text from PDFs and other supported document formats.
+2. Handle scanned documents using OCR where necessary.
+3. Preserve page numbers, chapter headings, sections, and document titles where available.
+4. Clean the text without removing important definitions, statistics, or context.
+5. Split the text into meaningful, overlapping chunks.
+6. Generate embeddings for every chunk.
+7. Store the original chunk text and its embedding in PostgreSQL using pgvector.
+8. Store document IDs, titles, filenames, page numbers, sections, chunk identifiers, model identifiers, and content hashes.
+9. Implement document retrieval with source citations.
+10. Support adding new documents and re-indexing changed documents without duplicating existing records.
+
+If the documents already exist in a project directory or storage location, reuse them.
+
+Create explicit commands for document ingestion, embedding generation, and indexing verification. Do not run expensive indexing operations automatically at every application startup.
+
+Keep document chunks and dataset metadata in logically separate vector indexes or tables.
+
+## 6. Intelligent Question Routing
+
+Implement a dedicated intent router that determines whether a question requires dataset analytics, document retrieval, both, clarification, or an unsupported response.
+
+### A. Dataset-specific questions
+
+Examples:
+
+- Compare crime figures for 2012 and 2013.
+- Which states reported the highest crime figures in 2020?
+- Show the year-over-year change in a crime category.
+- Compare Maharashtra and Karnataka.
+- What does the serious_fraud dataset contain?
+
+The workflow must be:
+
+**Question → Dataset metadata vector search → Schema validation → Data availability checks → Dynamic SQL generation → SQL validation → PostgreSQL execution → LLM analysis → Answer.**
+
+Use pgvector to discover the relevant tables and columns, but verify their actual availability before generating SQL.
+
+The final numerical answer must be based on real database query results, not on the metadata embeddings or the LLM's general knowledge.
+
+### B. Document-based questions
+
+Examples:
+
+- What does the official report say about cybercrime?
+- Explain a crime definition according to the uploaded book.
+- Summarize the chapter about economic offences.
+
+The workflow must be:
+
+**Question → Document vector search → Retrieve original text chunks → LLM answer generation → Answer with citations.**
+
+Use the document vector index for these questions. Cite the document title and page number wherever available.
+
+Do not generate SQL unnecessarily for questions that can be answered directly from the documents.
+
+### C. Hybrid questions
+
+Examples:
+
+- Compare the crime figures for 2012 and 2013 and explain the trend using the official report.
+- Compare financial fraud figures and explain the relevant findings from the uploaded book.
+
+The chatbot must retrieve dataset metadata, execute validated SQL, retrieve relevant document passages, and combine the evidence into one answer.
+
+Clearly distinguish database-derived numerical findings from document-supported explanations.
+
+If either source lacks sufficient information, explain the limitation instead of fabricating an answer.
+
+### D. Ambiguous questions
+
+Use conversation history to understand follow-up questions. If a required year, metric, dataset, or other detail remains ambiguous, ask the user for clarification when necessary.
+
+## 7. Dynamic Natural-Language-to-SQL Engine
+
+The chatbot must generate SQL dynamically rather than relying on hardcoded queries for every possible question.
+
+After retrieving relevant dataset metadata, inspect the actual schema and validate the requested analysis.
+
+Support:
+
+- Filtering and sorting.
+- Aggregations and grouping.
+- Year-over-year comparisons.
+- Percentage and absolute changes.
+- State-wise and category-wise comparisons.
+- Joins using verified relationships.
+- Common table expressions and window functions when appropriate.
+
+Understand the actual meaning and units of the metrics. Do not confuse crime counts, rates, percentages, and monetary losses.
+
+Before executing any generated SQL:
+
+- Restrict execution to approved analytical tables and columns.
+- Use a least-privilege, read-only database role.
+- Reject data-modifying and schema-modifying statements.
+- Reject multiple statements and unsupported SQL constructs.
+- Use parameterized queries for user-provided values.
+- Validate identifiers against the actual schema.
+- Enforce query timeouts and result limits.
+- Prevent SQL injection and unauthorized access to internal application tables.
+- Enforce existing user and administrator permissions.
+
+Do not rely solely on the LLM prompt for security. If a query cannot be safely validated, do not execute it.
+
+## 8. LLM-Based Answer Generation
+
+After executing SQL, pass the user's question, relevant conversation context, actual query results, source table information, and metric definitions to the LLM.
+
+The LLM should provide:
+
+- A direct answer.
+- Accurate numerical findings.
+- Relevant comparisons and trends.
+- Percentage changes where appropriate.
+- Tables or chart-ready data when useful.
+- Source dataset information.
+- Important limitations.
+
+For document-based answers, use retrieved original text and source metadata.
+
+For hybrid answers, combine the verified SQL results with relevant document passages.
+
+Never invent numbers, unsupported conclusions, or document citations. If the data does not support a requested answer, explain why.
+
+## 9. Integration With Existing Backend APIs
+
+The existing `backend` folder contains important API implementations. Inspect them and reuse their functionality wherever appropriate.
+
+Identify existing endpoints for:
+
+- Listing datasets.
+- Retrieving dataset records.
+- Applying filters.
+- Pagination and sorting.
+- Existing aggregations.
+- Retrieving metadata.
+- Authentication and role verification.
+
+If an existing API already performs an operation correctly, reuse its underlying service or API where suitable.
+
+For example, if an existing API retrieves crime records filtered by state and year, use its functionality where appropriate.
+
+However, do not repeatedly fetch hundreds of paginated responses just to calculate an aggregate or compare years. Use efficient database aggregations or an appropriate existing backend service when necessary.
+
+Do not call frontend-only API wrappers from FastAPI. Reuse underlying backend business logic or documented HTTP APIs.
+
+Avoid circular dependencies between the existing backend and the chatbot service. If FastAPI calls the existing backend over HTTP, configure the service URL securely and handle authentication, timeouts, and errors.
+
+## 10. Frontend Integration
+
+Inspect the existing `frontend` folder to understand its routing, authentication state, API client, table components, chart components, and UI conventions.
+
+Integrate the chatbot without breaking existing functionality.
+
+The chatbot response should support:
+
+- Natural-language answers.
+- Tabular results.
+- Year and state comparisons.
+- Chart-ready datasets.
+- Document citations.
+- Source dataset information.
+- Clarification requests.
+- Error messages.
+
+Reuse existing table and visualization components wherever possible. Return structured data that the frontend can render instead of embedding chart images in the answer.
+
+Adapt the response structure to existing frontend conventions where appropriate.
+
+If a new chat interface is needed, implement it consistently with the existing application design.
+
+## 11. Persistent Chat Sessions
+
+Users must be able to leave the application and return later to continue previous conversations.
+
+Create chatbot-specific PostgreSQL tables for conversations and messages.
+
+Support:
+
+- Creating conversations.
+- Listing conversation history.
+- Retrieving messages.
+- Continuing existing conversations.
+- Persisting user and assistant messages.
+- Renaming and deleting conversations where appropriate.
+- Maintaining context for follow-up questions.
+
+Example:
+
+User: "Compare crime figures for 2012 and 2013."
+
+User: "Now do the same for Maharashtra."
+
+User: "Show the percentage change too."
+
+The chatbot must understand the context without requiring the user to repeat the original question.
+
+Every conversation must belong to its authenticated user. Prevent users from reading or modifying another user's conversations.
+
+Use appropriate database indexes and pagination.
+
+## 12. Authentication and Authorization
+
+The existing application already implements authentication and administrator functionality.
+
+Inspect the existing backend and frontend authentication flows before implementing integration.
+
+If JWT is used, verify its signature, expiry, and relevant claims using a trusted configuration. Never trust user IDs or roles supplied directly by the frontend.
+
+Support regular users and administrators with appropriate permissions.
+
+Enforce authorization on every relevant endpoint, including conversation history, dataset access, document ingestion, and indexing operations.
+
+The FastAPI service must enforce its own security controls even if the frontend already hides restricted functionality.
+
+## 13. FastAPI APIs
+
+Create versioned REST APIs under `/api/v1`, following existing project conventions where appropriate.
+
+Include endpoints for:
+
+- Sending chatbot questions.
+- Creating and listing conversations.
+- Retrieving conversation messages.
+- Renaming and deleting conversations.
+- Uploading or registering documents through authorized administrative workflows.
+- Triggering document ingestion.
+- Checking ingestion and indexing status.
+- Checking service health.
+
+Use Pydantic request and response models, consistent error formats, and suitable HTTP status codes.
+
+Return structured fields such as:
+
+- Conversation and message IDs.
+- Answer text.
+- Response type.
+- Table data.
+- Chart data.
+- Source dataset names.
+- Document citations.
+- Limitations or clarification requests.
+
+Document the endpoints with example requests and responses.
+
+## 14. Configuration and Embedding Management
+
+Use environment variables for database URLs, API keys, model names, vector dimensions, retrieval parameters, and other configuration.
+
+Create a `.env.example` file and ensure real credentials are not committed to Git.
+
+Implement reusable embedding services for dataset metadata, document chunks, and incoming search queries.
+
+Record the model used for each embedding and ensure that query vectors match the corresponding index.
+
+Do not regenerate every embedding on each startup.
+
+## 15. Reliability, Testing, and Deployment
+
+Implement:
+
+- Database connection pooling.
+- Input validation.
+- API rate limiting.
+- SQL and LLM timeouts.
+- Safe retries.
+- Secure logging.
+- Error handling.
+- Vector indexes.
+- Pagination and result limits.
+- Health checks.
+- Restricted CORS configuration.
+
+Test dataset-only, document-only, and hybrid questions, as well as follow-up questions, missing data, invalid SQL, SQL injection, authorization failures, document ingestion errors, embedding failures, and duplicate ingestion.
+
+Prepare the FastAPI service for independent deployment. Include dependencies, environment variable documentation, migration instructions, embedding-generation commands, document-ingestion commands, API documentation, and frontend integration instructions.
+
+Verify that the deployed service can securely connect to PostgreSQL and pgvector. Do not assume local URLs or credentials work in production.
+
+## 16. Implementation Order
+
+Follow this sequence:
+
+1. Inspect the existing `backend` and `frontend` folders.
+2. Inspect the database schema, authentication flow, existing APIs, and source documents.
+3. Design chatbot-specific tables and vector indexes.
+4. Generate dataset metadata and embeddings.
+5. Extract document text, chunk it, and generate document embeddings.
+6. Verify both indexes and their stored original text.
+7. Implement dataset metadata retrieval and safe dynamic SQL.
+8. Implement document retrieval and citations.
+9. Implement intent routing and hybrid responses.
+10. Implement LLM answer generation and persistent conversations.
+11. Integrate authentication and existing backend APIs.
+12. Integrate the frontend using existing components where appropriate.
+13. Run tests and fix discovered issues.
+14. Prepare deployment documentation.
+
+Do not stop at a project skeleton or pseudocode. Implement working code wherever the required resources are available.
+
+If credentials, documents, or database access are unavailable, identify the exact blocker and continue with the components that can be implemented safely.
+
+## 17. Final Deliverables
+
+At completion, provide:
+
+- A summary of the existing project architecture and APIs inspected.
+- Files created or modified inside `chatboth`.
+- Chatbot-specific database tables and migrations.
+- Dataset metadata and document embedding pipelines.
+- Actual indexing counts and verification results.
+- Dynamic SQL generation and validation implementation.
+- Dataset/document/hybrid intent routing.
+- Authentication and persistent conversation functionality.
+- Frontend integration changes, if any.
+- Required environment variables.
+- Local setup and startup commands.
+- Automated test results and known limitations.
+- Production deployment instructions.
+- Example API requests and responses.
+- Any remaining blockers.
+
+**Final objective:** Build a complete, secure, independently deployable FastAPI chatbot backend that generates all dataset metadata and document embeddings from scratch, stores both vectors and original text in PostgreSQL using pgvector, answers dataset questions through validated SQL, answers document questions through RAG, supports hybrid questions, reuses the existing backend APIs and frontend components wherever appropriate, and provides secure persistent conversations for regular users and administrators.

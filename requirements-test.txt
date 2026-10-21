@@ -1,0 +1,3 @@
+groq
+psycopg[binary]
+python-dotenv
