@@ -161,6 +161,7 @@ Use the same response envelope for database, documents, hybrid, clarification, a
 - [x] Phase 2 baseline: independently tested dataset and ready-document retrievers plus a small discovery/smoke evaluation set. See `RETRIEVAL.md`. 31 unit tests and 6 live checks passed without Groq. Broader QA/unanswerable evaluation, context expansion, and production-scale candidate retrieval remain follow-up work.
 - [ ] Phase 3: safe structured query planning, SQL validation/execution, and grounded database responses.
 - [ ] Phase 4: document context assembly, source validation, insufficient-evidence handling, and grounded legal research responses. Full coverage remains gated by authorized enrichment.
+  - Implemented partial milestone: complete-passage character-budgeted context, document-selection gate, and structural citation identity validation. 42 unit tests and 8 live retrieval/context checks passed without Groq. Adjacent expansion, generation-token budgeting, claim support verification, and legal answer generation remain pending.
 - [ ] Phase 5: router, follow-up resolution, clarification, and hybrid composition.
 - [ ] Phase 6: conversation migrations, authenticated history/session APIs, bounded memory, idempotency, and isolation tests. Design ownership in Phase 1 even though persistence implementation follows retriever work.
 - [ ] Phase 7: FastAPI integration, pooling, input limits, rate limiting, timeouts, errors, and readiness checks; verify current primary documentation when implementing dependencies/security behavior.

@@ -58,4 +58,22 @@ The last check is a retrieval wiring smoke test, not independent legal QA evalua
 
 ## Next stages
 
+### Document context and citation baseline
+
+`document_context.py` now assembles complete retrieved passages within a configurable character budget (default 12,000). It preserves source text, PDF page references, edition labels, chunk revision/hash, and source IDs. Duplicate source IDs are removed. Oversized passages are omitted, never silently truncated. Candidates spanning documents/editions require explicit document selection rather than being silently combined.
+
+Use the CLI with `--context` in documents mode:
+
+```powershell
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\search_evidence.py' documents 'criminal procedure' --document-id 1 --context --context-max-chars 12000
+```
+
+Possible context statuses are `candidate_context`, `no_ready_evidence`, `document_selection_required`, and `context_budget_exceeded`. Partial coverage and source limitations are retained. A candidate context is not an answerability approval. Adjacent-chunk expansion is not implemented.
+
+The future generator response contract is an object containing only `claims`, each with `text` and `source_ids`. `validate_cited_response` rejects missing, duplicate, and unknown citation IDs and attaches metadata from assembled sources, not model-provided page/title fields. It validates citation identity only: it does not prove that the cited passage supports the claim, block every prompt-injection attempt, or verify current law.
+
+Context is JSON-encoded source data, not trusted instructions. Character bounds are not a substitute for the eventual generation model's token budget; implement model-aware prompt budgeting when generation is connected.
+
+After this extension, 42 offline unit tests and 8 live retrieval/context/citation wiring checks passed with zero Groq calls. The additional live citation test uses a source quote, not a generated answer. No end-to-end answer quality claim is made.
+
 Build safe query planning/execution only with the restricted runtime-access gate satisfied. Build document context assembly and citation checks against ready evidence. Add authenticated conversation storage and follow-up handling according to `IMPLEMENTATION_PLAN.md`. Groq-dependent generation and enrichment can wait until the user restores credits; do not silently restart either.

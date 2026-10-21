@@ -6,6 +6,7 @@ from dotenv import dotenv_values
 
 from metadata_embeddings import ROOT, Embedder
 from retrieval import Retriever, read_connection
+from document_context import build_document_context, validate_cited_response
 
 CASES = [
     ('auto theft motor vehicles', 'auto_theft'),
@@ -45,6 +46,20 @@ def main():
                                'expected_chunk': seed['id'],
                                'retrieved_chunks': [h['id'] for h in result['hits']],
                                'passed': any(h['id'] == seed['id'] for h in result['hits'])})
+                context = build_document_context(result)
+                checks.append({'check': 'bounded document context preserves source provenance',
+                               'passed': context['status'] == 'candidate_context'
+                               and len(context['context']) <= 12000
+                               and all(source['document_id'] == seed['document_id']
+                                       for source in context['sources'])})
+                if context['sources']:
+                    # Synthetic quote checks citation wiring, not model generation quality.
+                    source = context['sources'][0]
+                    validated = validate_cited_response({'claims': [
+                        {'text': source['original_text'], 'source_ids': [source['source_id']]}]}, context)
+                    checks.append({'check': 'citation identity validation against live evidence',
+                                   'passed': validated['citation_identity_valid']
+                                   and not validated['factual_support_verified']})
             else:
                 checks.append({'check': 'ready document evidence available', 'passed': False})
         report = {'model_revision': embedder.revision, 'checks': checks,
