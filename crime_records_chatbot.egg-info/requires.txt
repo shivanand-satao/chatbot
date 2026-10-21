@@ -1,0 +1,11 @@
+Django<6.0,>=5.2
+httpx<1.0,>=0.27
+pgvector<1.0,>=0.3
+psycopg[binary]<4.0,>=3.2
+PyJWT<3.0,>=2.9
+pydantic<3.0,>=2.9
+uvicorn[standard]<1.0,>=0.30
+
+[dev]
+pytest<9.0,>=8.0
+pytest-django<5.0,>=4.9
