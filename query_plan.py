@@ -14,7 +14,8 @@ TEXT = {'text', 'character varying', 'character'}
 PROTECTED = {'users', 'admins', 'refresh_tokens', 'user_settings', 'notifications',
              'dataset_metadata', 'dataset_columns', 'views_log', 'search_logs',
              'admin_modification_logs', 'response', 'api_request_logs', 'upload_history',
-             'chatbot_schema_catalog', 'chatbot_catalog'}
+             'chatbot_schema_catalog', 'chatbot_catalog',
+             'conversations', 'conversation_requests', 'messages'}
 OPERATORS = {'eq': '=', 'ne': '<>', 'gt': '>', 'gte': '>=', 'lt': '<', 'lte': '<='}
 AGGREGATES = {'count': 'COUNT', 'sum': 'SUM', 'avg': 'AVG', 'min': 'MIN', 'max': 'MAX'}
 

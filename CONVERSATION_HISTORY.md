@@ -15,7 +15,19 @@ History is not evidence. Follow-up questions still require fresh database/docume
 
 ## Persistence and returning-user behavior still pending
 
-No chats are saved across restarts or visits yet. No migrations, storage repository, history API, or frontend history UI were added here.
+The running application still does not save chats across restarts or visits. A prepared migration and offline-tested storage repository are now present, but the migration has NOT been applied and no history API or frontend history UI is connected.
+
+### Prepared storage milestone (not deployed)
+
+- `D:\cc\chatbot\migrations\003_conversations.sql` creates conversations, request state, and messages in the existing chatbot schema. It includes size/sequence constraints, cascading deletion, timestamps, per-conversation request identifiers, and a unique pending-request constraint. It is transactional and deliberately not repeatable; do not rerun it blindly. No existing authentication tables are changed.
+- `D:\cc\chatbot\conversation_store.py` supports creation, owner-scoped listing, last-active lookup, ascending recent message pages, deletion, beginning turns, and completing/failing turns. Every conversation-targeted public operation checks owner kind and ID. History table names are also blocked by the analytical compiler, even if supplied in its trusted catalog.
+- Supply an independently authenticated `Owner` and an idle, autocommit psycopg connection configured with `psycopg.rows.dict_row`. The repository neither creates connections nor loads credentials. Do not share a connection across concurrent requests. Each operation uses a short explicit transaction with statement/lock timeouts; never keep it open during generation.
+- Begin-turn locks the conversation, checks replay before revision conflicts, rejects another pending request, and saves the user message atomically with its request. Finish-turn saves one assistant result and source metadata; exact retries replay, changed retries fail. Terminal requests are immutable. A new attempt after a failed turn uses a new request UUID. No automatic retry of ambiguous commits is performed; callers retry with the same UUID and content.
+- Both saved messages increment revision and next sequence. Summaries are not stored/generated in this milestone. Context callers must load the current revision and map message rows into validated context records. Message pagination uses an exclusive sequence cursor; conversation pagination uses an exclusive `(created_at, id)` cursor and stable creation order. Last-active lookup uses update time separately. There is no snapshot guarantee across separate page requests.
+- Pending requests deliberately have no fabricated assistant placeholder. A worker crash can leave a request pending and block new turns. Before live integration, implement a durable worker lease/recovery policy; no timer silently retries generation here. The trusted service can record a failed terminal response through `finish_turn`; it must not expose arbitrary client-written assistant messages.
+- Stored sources are bounded allowlisted provenance fields, NOT proof of evidence validity. The generation service must validate citation identity/support before saving. Failed responses store no source claims. Do not save credentials, raw SQL, or private diagnostic errors as provenance or user-visible failures.
+- The migration enables row-level security and creates no policies or runtime grants. This intentionally blocks ordinary roles until a separately reviewed service-role policy/grant design is applied. Table owners and BYPASSRLS roles are not tenant-isolated by that setting; repository checks are not a replacement for least-privilege runtime roles. Do not use indexing credentials to deploy this service. Inspect inherited/default privileges and role memberships before applying.
+- Real PostgreSQL migration, rollback, constraint, ownership, deletion-race, and concurrency tests remain pending. Offline SQL mocks cannot establish those guarantees. Docker is not required or used.
 
 The next persistence stage must implement:
 
@@ -32,12 +44,12 @@ This baseline expects the server to provide its complete selected page, includin
 
 ## Validation
 
-63 offline tests passed across conversation context, query compilation, document context, retrieval, readiness, book parsing, and metadata indexing. Fourteen new history tests cover owner isolation, same numeric ID across account kinds, foreign-conversation messages, message sequence continuity, limits, summary identity/revision/boundaries, and incomplete-turn handling.
+84 offline tests passed across storage contracts, conversation context, query compilation, document context, retrieval, readiness, book parsing, and metadata indexing. This includes 21 repository/SQL-contract tests and 14 history-context tests. Repository tests use SQL-response mocks, not a database.
 
 Run from `D:\cc\chatbot`:
 
 ```powershell
-& 'D:\cc\chatbot\.venv\Scripts\python.exe' -m unittest test_conversation_context test_query_plan test_document_context test_retrieval test_readiness test_books test_metadata_indexing -v
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' -m unittest test_conversation_store test_conversation_context test_query_plan test_document_context test_retrieval test_readiness test_books test_metadata_indexing -v
 ```
 
 No database, Groq, model-loading, or network calls are needed for this suite.
