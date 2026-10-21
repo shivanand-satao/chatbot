@@ -6,7 +6,7 @@
 
 Malformed headers and backend 401/403 responses reject authentication. Network errors, redirects, oversized bodies, invalid JSON, and unexpected response shapes fail closed as identity-service failures. Token/response/transport details are not returned in errors. Never log authorization headers at the adapter, proxy, or application layer.
 
-Verified roles `user` map to the user namespace; `admin`, `superadmin`, and `moderator` map to the admin namespace. Unknown roles are rejected. Account IDs accept positive safe JSON integers or canonical positive decimal strings within PostgreSQL bigint range. Request-supplied account IDs/roles are never used to choose ownership.
+Verified roles `user` must carry explicit `account_kind: user`; `admin`, `superadmin`, and `moderator` must carry `account_kind: admin`. The profile must also carry `status: active`. Missing, inconsistent, or unknown roles/namespaces are rejected without legacy fallback. Account IDs accept positive safe JSON integers or canonical positive decimal strings within PostgreSQL bigint range. Request-supplied account IDs/roles are never used to choose ownership.
 
 ## Backend source inspection and limitations
 
@@ -18,7 +18,9 @@ Inspected locally:
 - `D:\cc\backend\backend\src\middleware\adminMiddleware.js`
 - `D:\cc\backend\backend\src\app.js`
 
-The profile route verifies the access token and returns `{success: true, user: decodedClaims}`. It does NOT reload account existence, disabled status, current role, or token revocation from storage. Logout removes a refresh token, not already-issued access tokens. Therefore this boundary inherits access-token lifetime and revocation limitations; it must not be described as current account-status verification. Live user/admin profile responses, bigint representation, deployed backend behavior, and actual role provenance remain unverified. In particular, confirm that admin-table roles can never equal `user`, since the token lacks a separate account-kind claim. This is an integration gate, not grounds for guessing an owner namespace.
+The earlier profile route returned token claims only. The subsequent local backend identity milestone now issues explicit `account_kind` on access/refresh tokens and rechecks the declared account table on profile/refresh. It requires an existing active account, rejects inconsistent namespaces and changed admin roles, and returns allowlisted current profile fields with a decimal-string ID. User login now requires active status; admin login additionally rejects unsupported roles. Old tokens without `account_kind` fail profile/refresh and require a new login; they are never upgraded by role inference. No schema changes are required by this code, but actual database status values and deployed behavior still need integration verification.
+
+Logout still removes only the refresh token, not already-issued access tokens. No session revocation list, token-version check, or forced reauthentication after password change was added. Existing non-profile protected routes still use their original JWT middleware: they do NOT automatically acquire these per-request account checks. Account reuse, status toggling, and role restoration can also make an unexpired token usable again. This is a scoped history-identity improvement, not a completed backend-wide authentication audit.
 
 ## History service
 
@@ -45,7 +47,7 @@ Listing returns `conversations` plus `next_before` (`created_at`, `id`). Message
 
 No database migration was applied, no real tokens were used, and no backend profile call was made during this milestone. Persistence is not connected to the running app. Before enabling it:
 
-1. Resolve namespace/account-status limitations and verify real user/admin tokens server-to-server without logging secrets.
+1. Deploy backend/chatbot identity changes together after reviewing the forced-login compatibility change; verify real user/admin tokens and actual active-status data server-to-server without logging secrets. Address remaining session revocation limitations separately.
 2. Run isolated PostgreSQL migration, privilege, locking, concurrency, and deletion-race tests; review least-privilege role policies before applying migration 003.
 3. Add an HTTP adapter with strict body/header/query limits, duplicate Authorization rejection, safe 500 responses, no-store cache headers, explicit CORS origins, rate/concurrency limits, and total request deadlines. Blocking verifier/database operations must not run directly on an async event loop.
 4. Add durable worker recovery before exposing message submission; verify retry/deletion/account-switch behavior end to end.

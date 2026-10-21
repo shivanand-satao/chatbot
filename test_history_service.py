@@ -16,7 +16,8 @@ from server_identity import (IdentityRejected, IdentityUnavailable, ProfileVerif
 
 class IdentityTests(unittest.TestCase):
     def profile(self, account_id=7, role='user'):
-        return {'success': True, 'user': {'id': account_id, 'role': role}}
+        return {'success': True, 'user': {'id': account_id, 'role': role,
+                'account_kind': 'user' if role == 'user' else 'admin', 'status': 'active'}}
 
     def test_role_namespaces(self):
         for role in ('user', 'admin', 'superadmin', 'moderator'):
@@ -30,6 +31,14 @@ class IdentityTests(unittest.TestCase):
                            '9223372036854775808', None, []):
             with self.assertRaises(IdentityUnavailable):
                 owner_from_profile(self.profile(account_id))
+
+    def test_explicit_active_namespace_is_required(self):
+        for field, value in (('account_kind', None), ('account_kind', 'admin'),
+                             ('status', None), ('status', 'banned')):
+            payload = self.profile()
+            payload['user'][field] = value
+            with self.assertRaises(IdentityRejected):
+                owner_from_profile(payload)
 
     def test_invalid_profiles_and_roles(self):
         for payload in (None, [], {}, {'success': 1}, {'success': True, 'user': []}):

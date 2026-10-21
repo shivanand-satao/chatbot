@@ -38,6 +38,8 @@ def owner_from_profile(payload):
     roles = {'user': 'user', 'admin': 'admin', 'superadmin': 'admin', 'moderator': 'admin'}
     if not isinstance(role, str) or role not in roles:
         raise IdentityRejected('Account role is not supported')
+    if user.get('account_kind') != roles[role] or user.get('status') != 'active':
+        raise IdentityRejected('Verified active account namespace is required')
     account_id = user.get('id')
     # PostgreSQL bigint can arrive from Node pg as a decimal string. Reject
     # floats, booleans, signs, whitespace, and unsafe numeric JSON integers.
