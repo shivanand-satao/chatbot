@@ -9,6 +9,7 @@ Requires-Dist: pgvector<1.0,>=0.3
 Requires-Dist: psycopg[binary]<4.0,>=3.2
 Requires-Dist: PyJWT<3.0,>=2.9
 Requires-Dist: pydantic<3.0,>=2.9
+Requires-Dist: python-dotenv<2.0,>=1.0
 Requires-Dist: uvicorn[standard]<1.0,>=0.30
 Provides-Extra: dev
 Requires-Dist: pytest<9.0,>=8.0; extra == "dev"

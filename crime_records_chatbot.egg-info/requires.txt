@@ -4,6 +4,7 @@ pgvector<1.0,>=0.3
 psycopg[binary]<4.0,>=3.2
 PyJWT<3.0,>=2.9
 pydantic<3.0,>=2.9
+python-dotenv<2.0,>=1.0
 uvicorn[standard]<1.0,>=0.30
 
 [dev]
