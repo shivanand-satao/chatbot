@@ -158,7 +158,7 @@ Use the same response envelope for database, documents, hybrid, clarification, a
 - [x] Inspect existing indexing documentation, embedding helper, document migration, and frontend integration handoff.
 - [x] Record architecture and persistent-history requirements in this document.
 - [x] Phase 1: preliminary read-only coverage, authentication-source, dependency, and database privilege audit. See `READINESS.md` and the local ignored `readiness-output/report.json`. Live token verification and restricted runtime-role testing remain integration gates; document coverage is incomplete. Indexing was not restarted.
-- [ ] Phase 2: independently tested dataset and document retrievers; curated retrieval evaluation set.
+- [x] Phase 2 baseline: independently tested dataset and ready-document retrievers plus a small discovery/smoke evaluation set. See `RETRIEVAL.md`. 31 unit tests and 6 live checks passed without Groq. Broader QA/unanswerable evaluation, context expansion, and production-scale candidate retrieval remain follow-up work.
 - [ ] Phase 3: safe structured query planning, SQL validation/execution, and grounded database responses.
 - [ ] Phase 4: document context assembly, source validation, insufficient-evidence handling, and grounded legal research responses. Full coverage remains gated by authorized enrichment.
 - [ ] Phase 5: router, follow-up resolution, clarification, and hybrid composition.
@@ -188,4 +188,4 @@ Use the same response envelope for database, documents, hybrid, clarification, a
 
 ## 13. Next execution milestone
 
-Follow this plan beginning with Phase 1: inspect the existing authentication contract and safely verify retrieval coverage and runtime privileges. First implementation should provide tested retrieval components and a readiness report, without enabling unrestricted SQL execution or pretending document enrichment is complete.
+Phases 1 and the Phase 2 retrieval baseline are recorded in `READINESS.md` and `RETRIEVAL.md`. Next, design safe query planning and document context assembly with explicit readiness gates. Groq-dependent generation waits for restored credits; never restart book enrichment implicitly. Do not enable unrestricted SQL execution or pretend document coverage is complete.
