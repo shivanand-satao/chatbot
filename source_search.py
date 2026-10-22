@@ -11,7 +11,26 @@ ROLE = 'chatbot_source_search'
 STOPWORDS = frozenset('a an the is are was were be been being of on in to for from by with and or '
                      'what which who when where why how do does did can could would should '
                      'please tell me about explain find references document documents source '
-                     'sources under available indian india law laws'.split())
+                     'sources under available indian india law laws now then also just '
+                     'i my we our you your he she it this that any all if without have has '
+                     'had am will shall so there here get give want know'.split())
+
+# Small, explicit spelling/inflection map, not model-written query syntax.
+TERM_ALIASES = {'arreest': 'arrest', 'arresst': 'arrest', 'arrested': 'arrest',
+                'arrests': 'arrest', 'arresting': 'arrest', 'wiihtou': 'without',
+                'wihtout': 'without', 'withou': 'without', 'notices': 'notice',
+                'safeguards': 'safeguard', 'rights': 'right'}
+
+
+def retrieval_terms(question):
+    # Normalize before stopword removal, so misspelled filler does not become evidence.
+    normalized = re.sub(r'[^\W_]+', lambda match: TERM_ALIASES.get(match[0].casefold(),
+                        match[0].casefold()), question)
+    terms = search_terms(normalized)
+    if 'arrest' in terms:
+        # Arrest is the core concept; police/notice alone are insufficient matches.
+        return terms, ['arrest']
+    return terms, []
 
 
 def search_terms(question):
@@ -48,37 +67,47 @@ def document_list(db):
 
 
 def search(db, question, document_id=None):
-    terms = search_terms(question)
+    search_terms(question)  # Validate before normalization.
+    terms, required = retrieval_terms(question)
     if document_id is not None and (type(document_id) is not int or not 1 <= document_id <= 9223372036854775807):
         raise ValueError('Invalid document selection')
     hits = []
     if terms:
-        # Each term is independently converted as plain text, then OR-combined by PostgreSQL.
+        # Terms are server-tokenized, bound, and prefix-matched (arrest/arrested).
+        # Coverage outranks single-word density; diversity never forces irrelevant documents.
         hits = db.execute('''WITH query AS (
-            SELECT string_agg(plainto_tsquery('simple',term)::text,' | ')::tsquery AS q
+            SELECT to_tsquery('simple',string_agg(quote_literal(term) || ':*',' | ')) AS q
+            FROM unnest(%s::text[]) AS term), required AS (
+            SELECT to_tsquery('simple',string_agg(quote_literal(term) || ':*',' & ')) AS q
             FROM unnest(%s::text[]) AS term)
             , ranked AS (SELECT c.id,c.document_id,d.title,d.version_label,c.page_start,c.page_end,
-                c.section_reference,c.revision,left(c.original_text,3500) AS passage,
-                length(c.original_text)>3500 AS excerpt_truncated,
+                c.section_reference,c.revision,left(c.original_text,6000) AS passage,
+                length(c.original_text)>6000 AS excerpt_truncated,
+                (SELECT count(*) FROM unnest(%s::text[]) t WHERE
+                    to_tsvector('simple',c.original_text) @@
+                    to_tsquery('simple',quote_literal(t) || ':*')) AS coverage,
                 ts_rank_cd(to_tsvector('simple',c.original_text),query.q) AS score,
                 row_number() OVER (PARTITION BY c.document_id ORDER BY
+                    (SELECT count(*) FROM unnest(%s::text[]) t WHERE
+                        to_tsvector('simple',c.original_text) @@
+                        to_tsquery('simple',quote_literal(t) || ':*')) DESC,
                     ts_rank_cd(to_tsvector('simple',c.original_text),query.q) DESC,c.id) AS document_rank
             FROM chatbot.document_chunks c JOIN chatbot.documents d ON d.id=c.document_id
-            CROSS JOIN query
+            CROSS JOIN query CROSS JOIN required
             WHERE c.status='ready' AND c.content_hash=c.embedded_content_hash
               AND (%s::bigint IS NULL OR c.document_id=%s)
               AND to_tsvector('simple',c.original_text) @@ query.q
+              AND (required.q IS NULL OR to_tsvector('simple',c.original_text) @@ required.q)
+              AND d.version_label NOT ILIKE '%%index only%%'
             ) SELECT id,document_id,title,version_label,page_start,page_end,
                 section_reference,revision,passage,excerpt_truncated FROM ranked
-            WHERE document_rank <= 2 ORDER BY document_rank,score DESC,id
-            LIMIT 8''', (terms, document_id, document_id)).fetchall()
+            WHERE document_rank <= 3 ORDER BY coverage DESC,score DESC,document_rank,id
+            LIMIT 10''', (terms, required, terms, terms, document_id, document_id)).fetchall()
     for hit in hits:
         hit['source_id'] = f"document:{hit['document_id']}:chunk:{hit['id']}:revision:{hit['revision']}"
     return {'question': question.strip(), 'status': 'candidate_passages' if hits else 'no_matches',
             'method': 'keyword_search', 'terms': terms, 'hits': hits,
             'search_scope': 'all_documents' if document_id is None else 'selected_document',
             'answer_generated': False, 'generation_allowed': False,
-            'notice': 'Keyword matches are source candidates, not verified answers. '
-                      'Editions may include historical texts or introduced bills, not current law. '
-                      'PDF page numbers are shown. Legal research is not legal advice. '
-                      'Questions and results are not saved.'}
+            'notice': 'Analysis is based on uploaded editions, which may be historical texts or bills. '
+                      'Current legal validity is not verified. Questions and results are not saved.'}

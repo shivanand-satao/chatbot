@@ -25,7 +25,7 @@ class SearchTests(unittest.TestCase):
         result = search(db, 'freedom', 1)
         sql, params = db.execute.call_args.args
         self.assertNotIn('freedom', sql)
-        self.assertEqual(params, (['freedom'], 1, 1))
+        self.assertEqual(params, (['freedom'], [], ['freedom'], ['freedom'], 1, 1))
         self.assertEqual(result['hits'][0]['source_id'], 'document:1:chunk:7:revision:2')
         self.assertFalse(result['answer_generated'])
         self.assertFalse(result['generation_allowed'])
