@@ -1,3 +1,4 @@
-# Minimal history/connectivity deployment; no CPU embedding model or Groq yet.
+# CPU-only HTTP, keyword search and Groq query planning. No embedding model.
 gunicorn>=23,<24
 psycopg[binary]>=3.2,<4
+groq>=1.7,<2
