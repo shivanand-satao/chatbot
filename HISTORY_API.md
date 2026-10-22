@@ -57,6 +57,12 @@ Primary documentation reviewed: Python 3.13 `http.client` (HTTPSConnection, sock
 
 ## Offline validation
 
+Later local HTTP adapter: `D:\cc\chatbot\HTTP_ADAPTER.md` describes the standard-library
+WSGI wrapper and loopback-only launcher. No new dependencies or production server
+were added. The launcher keeps history storage disabled; readiness remains 503.
+The framework-neutral HistoryService remains separate from HTTP routing. Database,
+production serving, and real-account verification gates below are not closed by it.
+
 Subsequent local HTTP verification: `AUTH_INTEGRATION.md` records 10 passing loopback tests using real backend auth routes/JWTs and the Python verifier, but a fake database. This partially closes the transport integration gate only; real database/deployed authentication gates remain open. No production profile request or real token was used.
 
 Run from `D:\cc\chatbot`:

@@ -21,6 +21,28 @@ Source defaults to `C:\Users\shiva\OneDrive\Desktop\books for rah`.
 
 ## Editing a passage
 
+## Resume existing index without migrations
+
+`D:\cc\chatbot\resume_book_index.py` resumes only pending chunks, in batches of
+100, under the existing pipeline advisory lock. It does not extract documents or
+apply migrations. It makes billable Groq calls and writes vectors. Run only one
+worker. Completed chunks and semantic cache are retained after interruption.
+
+Progress: `D:\cc\chatbot\book-output\resume-status.json` (counts update at batch
+boundaries). Worker logs are `resume-stdout.log` and `resume-stderr.log` in that
+same ignored output folder when launched with redirection. Live database counts
+are authoritative. A terminal `complete` status requires no pending/review/failed
+chunks and read-only validation of ready vector dimensions, normalization, source
+text preservation, and hashes. A `failed` or `needs_review` status is NOT success.
+
+```powershell
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\resume_book_index.py'
+```
+
+On October 22, 2026, the user authorized resuming enrichment/storage. Initial live
+counts were 72 ready and 10,276 pending across six PDFs. Completion must be checked
+against the worker status and live counts; do not infer it merely from launch.
+
 ```sql
 SELECT id,document_id,page_start,section_reference,original_text,
        semantic_metadata,embedding_text,status,revision
