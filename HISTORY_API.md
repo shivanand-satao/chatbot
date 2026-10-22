@@ -1,5 +1,11 @@
 # Identity and history service contract (not a deployed API)
 
+October 22, 2026 update: migrations 003/004 are applied; dedicated history runtime
+login and owner-scoped RLS passed focused live checks with the hosted normal user.
+See HISTORY_RUNTIME.md, which supersedes the older unapplied-migration statements
+below. Local persistence is explicitly opt-in; no frontend/public deployment or
+generation enablement occurred. Crash recovery and broader race tests remain gates.
+
 ## Implemented boundary
 
 `server_identity.py` verifies a bearer header by calling the server-configured backend origin at `/api/auth/profile`. It never locally decodes JWT claims, shares JWT signing secrets, or accepts a client-provided verification URL. HTTPS is required except explicitly enabled loopback HTTP for development. It does not follow redirects, discover environment proxies, cache identities, or retry failed requests. Responses are capped at 16 KiB with a maximum configured socket timeout of ten seconds. This socket timeout is not a total end-to-end deadline; a future HTTP deployment must also bound total request duration and concurrent authentication work.

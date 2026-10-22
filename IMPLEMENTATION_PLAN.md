@@ -2,6 +2,23 @@
 
 Updated: October 22, 2026
 
+History database milestone: user-authorized migrations 003/004 applied after rollback
+rehearsal; dedicated nonprivileged history login stored only in ignored local .env.
+RLS policies scope verified owner settings and child-parent visibility. Focused live
+hosted-user create/reload/idempotency/namespace/concurrency/deletion checks passed;
+168 offline/loopback tests passed. See HISTORY_RUNTIME.md. No public deployment,
+frontend connection, generation or analytical runtime provisioning. Local history
+launcher supports explicit --enable-history and remains disabled by default.
+
+Combined evaluation milestone: 165 offline/loopback tests passed. Thirty ANN-vs-
+exact cases (27 filtered) passed 90% candidate overlap, with observed range
+93–100%; all observed plans used HNSW. Nine agent-labeled paraphrase cases across
+six PDFs (including two Hindi questions) achieved Hit@5=100%, MRR@10=0.926.
+Labels are source/hash-pinned development cases, not independent human evaluation.
+All context results now explicitly mark answerability unverified and generation
+not allowed. Twenty-five live boundary checks passed again. Generation, analytical
+execution, persistence and deployment remain disabled/pending. See RETRIEVAL.md.
+
 Latest retrieval milestone: all 10,348 document chunks indexed. Document search
 now uses bounded cosine candidates (100) with the existing HNSW index instead of
 the 2,000-row exact-scan failure. 151 offline/loopback tests and seven existing

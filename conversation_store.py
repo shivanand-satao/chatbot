@@ -57,12 +57,15 @@ def validate_sources(sources):
 
 
 class ConversationStore:
-    def __init__(self, connection, owner):
+    def __init__(self, connection, owner, database_owner_scope=False):
         if not isinstance(owner, Owner):
             raise ValueError('Expected a verified owner record')
         if connection.row_factory is not dict_row:
             raise ValueError('Repository requires psycopg dict_row')
         self.connection, self.owner = connection, owner
+        if type(database_owner_scope) is not bool:
+            raise ValueError('database_owner_scope must be boolean')
+        self.database_owner_scope = database_owner_scope
 
     @contextmanager
     def transaction(self):
@@ -71,6 +74,10 @@ class ConversationStore:
         with self.connection.transaction():
             self.connection.execute("SET LOCAL statement_timeout='10000ms'")
             self.connection.execute("SET LOCAL lock_timeout='3000ms'")
+            if self.database_owner_scope:
+                self.connection.execute('''SELECT set_config('app.history_owner_kind',%s,true),
+                    set_config('app.history_owner_id',%s,true)''',
+                    (self.owner.account_kind, str(self.owner.account_id)))
             yield
 
     def _owned(self, conversation_id, lock=False):

@@ -12,7 +12,10 @@ def build_document_context(result, max_chars=12000):
     hits = result['hits']
     base = {'status': 'no_ready_evidence', 'context': '', 'sources': [],
             'omitted_source_ids': [], 'partial_coverage': result['partial_coverage'],
-            'warnings': list(result['limitations']), 'answer_generated': False}
+            'warnings': list(result['limitations']), 'answer_generated': False,
+            'answerability': {'status': 'unverified', 'generation_allowed': False,
+                             'relevance_verified': False, 'current_law_verified': False,
+                             'reason': 'Candidate retrieval and citation identity do not establish answerability.'}}
     if not hits:
         return base
     versions = {(hit['document_id'], hit['version_label']) for hit in hits}

@@ -29,6 +29,19 @@ class DocumentContextTests(unittest.TestCase):
         result['hits'] = []
         self.assertEqual(build_document_context(result)['status'], 'no_ready_evidence')
 
+    def test_candidate_context_never_authorizes_generation(self):
+        context = build_document_context(evidence())
+        self.assertEqual(context['status'], 'candidate_context')
+        self.assertEqual(context['answerability']['status'], 'unverified')
+        self.assertFalse(context['answerability']['generation_allowed'])
+        self.assertFalse(context['answerability']['relevance_verified'])
+        self.assertFalse(context['answerability']['current_law_verified'])
+
+    def test_empty_context_remains_generation_blocked(self):
+        result = evidence()
+        result['hits'] = []
+        self.assertFalse(build_document_context(result)['answerability']['generation_allowed'])
+
     def test_document_mixing_requires_selection(self):
         result = evidence()
         other = dict(result['hits'][0], document_id=2)

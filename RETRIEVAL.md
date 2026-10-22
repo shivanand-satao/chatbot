@@ -2,6 +2,50 @@
 
 ## October 22, 2026: indexed document retrieval
 
+### Combined recall, relevance and generation-boundary milestone
+
+- `D:\cc\chatbot\verify_indexed_retrieval.py` now compares ANN candidates with
+  exact vector ordering for three unscoped queries plus document, version and
+  stored-section filters for nine paraphrased questions (30 cases). All passed
+  the development threshold of 90% top-100 ID overlap; observed range was 93–100%.
+  All 30 observed plans used the existing HNSW index. This is ID overlap, not a
+  tie-aware relevance metric or proof of exhaustive recall. Highly selective
+  future scopes may choose different plans or return fewer candidates.
+- `D:\cc\chatbot\document_relevance_cases.json` pins nine source labels by chunk
+  ID and content hash across all six PDFs. Questions were authored separately
+  from the self-retrieval excerpt tests. They include two Hindi paraphrases.
+  Labels were checked by the coding agent against uploaded source passages, not
+  independently reviewed by a human legal expert. This is a small development
+  set, not held-out evaluation. Bill/index/historical edition identity is retained.
+- `D:\cc\chatbot\evaluate_relevance.py` validates label identity before scoring.
+  All nine expected passages appeared in the top five (Hit@5/Hit@10: 100%; MRR@10:
+  0.926). Other relevant passages are not exhaustively labeled. Label mismatches
+  and top-ten misses produce a nonzero exit rather than being silently hidden.
+- Four unsupported, instruction-like, current-law and ambiguous questions are
+  reported separately as diagnostics, not successful rejection tests. No model
+  generation, legal conclusion or general answerability evaluation was performed.
+- Every assembled context now carries explicit answerability.status=unverified,
+  generation_allowed=false, relevance_verified=false and current_law_verified=false.
+  This is a conservative contract marker, not a relevance classifier or a live
+  generation authorization system. Existing structural citation validation is
+  unchanged and still does not establish factual entailment.
+
+Validation: 165 offline/loopback tests passed; the existing 25 live boundary
+cases passed again. Read-only recall/relevance checks made no Groq calls, used
+CPU only, and performed no schema or data mutations. Reports are ignored files:
+`D:\cc\chatbot\retrieval-output\indexed-verification.json` and
+`D:\cc\chatbot\retrieval-output\relevance-evaluation.json`.
+
+```powershell
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\verify_indexed_retrieval.py'
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\evaluate_relevance.py'
+```
+
+Next gates: human-reviewed held-out questions and relevance labels, actual
+answerability/abstention evaluation, robust section/article resolution, injection
+testing with a generator, and restricted runtime credentials. Persistence still
+requires separately authorized disposable PostgreSQL integration tests/migration.
+
 ### Expanded filter and evidence-boundary evaluation
 
 `D:\cc\chatbot\evaluate_document_retrieval.py` adds 25 read-only live cases:
