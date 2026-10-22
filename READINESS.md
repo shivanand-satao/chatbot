@@ -1,5 +1,19 @@
 # Phase 1 readiness audit
 
+## Deployed beta update — October 22, 2026
+
+The audit below is historical. New live checks found all 10,348 document passages
+searchable across six editions. Keyword source search and Groq structured query planning
+are now implemented. The analytical runtime role was checked for access to only the
+78 approved dataset tables, no account/history reads, and no source-table writes.
+A live Groq plan compiled and executed against that restricted role, returning five
+Maharashtra 2012 rows. This is not proof of statistical or current-law answerability.
+
+History and generated legal answers remain disabled. Restricted runtime DSNs, not the
+indexing connection, are configured on Render. Hosted backend/chatbot deployments and
+frontend bundle were checked. Missing/invalid auth and CORS are smoke-tested separately;
+the full browser flow still requires a real signed-in user session. See RENDER_DEPLOYMENT.md.
+
 Audit completed October 22, 2026 (local date; machine report uses UTC).
 
 ## What ran
