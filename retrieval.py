@@ -19,9 +19,6 @@ def read_connection(db_url):
         conn.execute('SET TRANSACTION READ ONLY')
         conn.execute("SET LOCAL statement_timeout='15000ms'")
         conn.execute("SET LOCAL lock_timeout='3000ms'")
-        # Exact baseline retrieval, not approximate HNSW recall.
-        conn.execute('SET LOCAL enable_indexscan=off')
-        conn.execute('SET LOCAL enable_bitmapscan=off')
         try:
             yield conn
         finally:
@@ -126,6 +123,14 @@ class Retriever:
         hits = []
         if any(row['compatible_ready'] for row in coverage):
             vector = self.query_vector(question)
+            # pgvector >=0.8: filtered ANN can continue within bounded scan effort.
+            self.connection.execute("SET LOCAL hnsw.iterative_scan='strict_order'")
+            self.connection.execute('SET LOCAL hnsw.ef_search=400')
+            self.connection.execute('SET LOCAL hnsw.max_scan_tuples=20000')
+            # Hash-equality selectivity can make the planner prefer a full sort.
+            # Scope the planner preference to this candidate query only.
+            self.connection.execute('SET LOCAL enable_seqscan=off')
+            self.connection.execute('SET LOCAL enable_sort=off')
             rows = self.connection.execute('''SELECT c.id,c.document_id,d.title,d.filename,
                 d.version_label,c.page_start,c.page_end,c.section_reference,c.original_text,
                 c.context_text,c.revision,c.content_hash,
@@ -135,18 +140,24 @@ class Retriever:
                 AND (%s::bigint IS NULL OR c.document_id=%s)
                 AND (%s::text IS NULL OR d.version_label=%s)
                 AND (%s::text IS NULL OR c.section_reference=%s)
-                ORDER BY c.id LIMIT 2001''',
+                ORDER BY c.embedding <=> %s::public.vector LIMIT 100''',
                 (vector, MODEL, self.embedder.revision, document_id, document_id,
-                 version_label, version_label, section, section)).fetchall()
-            if len(rows) > 2000:
-                raise RuntimeError('Document scan exceeds baseline budget; implement indexed candidate retrieval')
+                 version_label, version_label, section, section, vector)).fetchall()
+            self.connection.execute('SET LOCAL enable_seqscan=on')
+            self.connection.execute('SET LOCAL enable_sort=on')
+            if len(rows) > 100:
+                raise RuntimeError('Document candidate budget exceeded')
             hits = rank_candidates(rows, question, 'original_text', limit)
             for hit in hits:
                 hit['source_id'] = f"document:{hit['document_id']}:chunk:{hit['id']}:revision:{hit['revision']}"
         return {'kind': 'documents', 'status': 'candidate_passages' if hits else 'no_ready_evidence',
                 'hits': hits, 'coverage': coverage,
                 'partial_coverage': any(row['compatible_ready'] < row['chunks'] for row in coverage),
+                'retrieval': {'method': 'bounded_vector_candidates', 'candidate_limit': 100,
+                              'candidate_count': len(rows) if any(row['compatible_ready'] for row in coverage) else 0,
+                              'approximate_recall': True},
                 'limitations': ['Only model-compatible ready passages are searched; pending content is excluded.',
+                                'Approximate vector candidates may miss relevant passages; lexical reranking is candidate-only.',
                                 'Passages are candidates, not verified answers or current-law determinations.',
                                 'Unscoped search may span editions; choose a document/version before legal synthesis.',
                                 'No LLM answer generated. Legal research is not legal advice.']}

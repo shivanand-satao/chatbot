@@ -64,11 +64,32 @@ class RetrievalTests(unittest.TestCase):
             [{'id': 1, 'chunks': 100, 'compatible_ready': 1}],
             [{'id': 7, 'document_id': 1, 'revision': 2, 'original_text': 'Procedure', 'similarity': .8}]]
         result = self.retriever.documents('Procedure', document_id=1, version_label='edition', section='1.')
-        sql, parameters = self.conn.execute.call_args.args
+        sql, parameters = next(call.args for call in reversed(self.conn.execute.call_args_list)
+                               if 'ORDER BY c.embedding <=>' in call.args[0])
         self.assertIn('chatbot.ready_document_chunks', sql)
         self.assertIn('edition', parameters)
         self.assertIn('1.', parameters)
+        self.assertIn('ORDER BY c.embedding <=> %s::public.vector LIMIT 100', sql)
+        self.assertNotIn('ORDER BY c.id', sql)
+        self.assertEqual(result['retrieval']['candidate_count'], 1)
+        self.assertTrue(result['retrieval']['approximate_recall'])
         self.assertEqual(result['hits'][0]['source_id'], 'document:1:chunk:7:revision:2')
+
+    def test_large_collection_uses_bounded_candidates(self):
+        self.conn.execute.return_value.fetchall.side_effect = [
+            [{'id': 1, 'chunks': 10348, 'compatible_ready': 10348}],
+            [{'id': 7, 'document_id': 1, 'revision': 1, 'original_text': 'Evidence', 'similarity': .8}]]
+        result = self.retriever.documents('Evidence')
+        self.assertEqual(len(result['hits']), 1)
+        self.assertFalse(result['partial_coverage'])
+        statements = [call.args[0] for call in self.conn.execute.call_args_list]
+        self.assertIn("SET LOCAL hnsw.iterative_scan='strict_order'", statements)
+
+    def test_document_candidate_overflow_fails_closed(self):
+        self.conn.execute.return_value.fetchall.side_effect = [
+            [{'id': 1, 'chunks': 10348, 'compatible_ready': 10348}], [{}]*101]
+        with self.assertRaises(RuntimeError):
+            self.retriever.documents('Evidence')
 
     def test_filters_reject_invalid_ids_and_empty_sections(self):
         for document_id in (0, -1, True, '1'):

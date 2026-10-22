@@ -1,12 +1,15 @@
 """Resume existing pending book chunks without extraction or schema migrations.
 
-Operational command: makes billable Groq calls and writes document vectors.
+Operational command: writes document vectors. Default enriched strategy makes
+billable Groq calls; --strategy source-only uses only the local CPU model.
 Progress is stored in ignored book-output/resume-status.json. Errors are
 sanitized; never serialize exception bodies that might contain credentials.
 """
 
 import json
+import argparse
 import os
+import time
 from datetime import datetime, timezone
 
 import psycopg
@@ -32,6 +35,10 @@ def checkpoint(state, **details):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--strategy', choices=('enriched', 'source-only'), default='enriched')
+    parser.add_argument('--batch-size', type=int, choices=range(1, 33), default=8)
+    args = parser.parse_args()
     checkpoint('starting')
     try:
         config = dotenv_values(ROOT / '.env', interpolate=False)
@@ -42,16 +49,22 @@ def main():
             connection.execute("SET statement_timeout='30s'")
             initial = counts(connection)
             checkpoint('loading_local_model', initial=initial, counts=initial)
-            embedder = Embedder()
+            embedder = Embedder(batch_size=args.batch_size if args.strategy == 'source-only' else 2)
+            started = time.monotonic()
             while True:
                 before = counts(connection)
                 if not before.get('pending', 0):
                     break
-                checkpoint('running', initial=initial, counts=before)
-                enrich(connection, embedder, config['groq_api'], limit=100)
+                checkpoint('running', initial=initial, counts=before, strategy=args.strategy)
+                if args.strategy == 'source-only':
+                    from source_book_embeddings import embed_pending
+                    embed_pending(connection, embedder, limit=32)
+                else:
+                    enrich(connection, embedder, config['groq_api'], limit=100)
                 after = counts(connection)
-                report(connection)
-                checkpoint('running', initial=initial, counts=after)
+                print(f"Ready: {after.get('ready', 0):,} | Remaining: {after.get('pending', 0):,} | "
+                      f"Strategy: {args.strategy} | Elapsed: {time.monotonic()-started:.0f}s", flush=True)
+                checkpoint('running', initial=initial, counts=after, strategy=args.strategy)
                 if after.get('pending', 0) >= before.get('pending', 0):
                     raise RuntimeError('No pending-chunk progress; manual review required')
             # Read-only validation: do not edit source passages even temporarily.

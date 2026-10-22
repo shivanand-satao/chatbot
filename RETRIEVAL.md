@@ -1,5 +1,41 @@
 # Retrieval baseline — no Groq required
 
+## October 22, 2026: indexed document retrieval
+
+All 10,348 document chunks are now ready. Document retrieval no longer fetches
+an ID-ordered prefix or fails at 2,000 rows. It orders by cosine distance and
+fetches at most 100 compatible ready candidates before lexical/semantic rank
+fusion. Dataset metadata retains its existing 2,000-row exact baseline budget.
+
+The existing partial HNSW cosine index is reused; no migration or database writes
+were required. Live pgvector version: 0.8.2. Iterative strict-order scans use
+ef_search=400 and max_scan_tuples=20000 (an approximate effort limit, not an exact
+row-scan cap). Query/lock timeouts remain active. Local planner preferences disable
+sequential scans and sorts for document candidate selection and re-enable them
+afterward. This encourages index use; it is not a guarantee for every filter/plan.
+Primary reference: pgvector official README, Indexing / Iterative Index Scans.
+
+Model/revision, document/version/section filters, ready-view source-hash checks,
+original passages and source IDs are preserved. Retrieval output explicitly marks
+approximate recall and reports candidate count/limit. Lexical overlap only reranks
+the vector candidate set, not the full collection; exact keyword/section discovery
+and filtered recall need broader evaluation. Fewer candidates do not establish
+absence of relevant evidence or complete search coverage.
+
+Validation: 151 offline/loopback tests passed. Seven existing live retrieval,
+context and citation-wiring checks passed. Three additional unscoped English/Hindi
+queries used the HNSW index and matched 100%, 93%, and 100% of exact top-100
+candidates. This small smoke sample is not a general recall or legal QA benchmark.
+No Groq calls, GPU use, migration, source mutation, or generation was involved.
+
+```powershell
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\verify_indexed_retrieval.py'
+```
+
+Results: ignored retrieval-output/indexed-verification.json. The historical
+baseline notes below describe earlier milestones and are superseded by this
+section for document coverage and candidate retrieval.
+
 ## Available now
 
 `retrieval.py` retrieves candidate dataset metadata or ready document passages with the cached local E5 model. It makes no Groq calls, generates no SQL, queries no individual crime records, and generates no final answer. Retrieval output is evidence for later planning/generation stages, not an assertion that the question is answerable.

@@ -34,7 +34,10 @@ def pack_text(text, prefix, token_count, limit=480):
 
 
 class Embedder:
-    def __init__(self):
+    def __init__(self, batch_size=2):
+        if type(batch_size) is not int or not 1 <= batch_size <= 32:
+            raise ValueError('Batch size must be between 1 and 32')
+        self.batch_size = batch_size
         import torch
         from transformers import AutoModel, AutoTokenizer
 
@@ -55,10 +58,10 @@ class Embedder:
         torch = self.torch
         vectors = []
         with torch.inference_mode():
-            for start in range(0, len(texts), 2):
+            for start in range(0, len(texts), self.batch_size):
                 batch = self.tokenizer(
                     [("query: " if query else "passage: ") + text
-                     for text in texts[start:start+2]],
+                     for text in texts[start:start+self.batch_size]],
                     padding=True, truncation=False, return_tensors="pt",
                 )
                 if batch['input_ids'].shape[1] > 512:

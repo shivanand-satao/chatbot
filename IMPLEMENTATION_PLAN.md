@@ -2,6 +2,15 @@
 
 Updated: October 22, 2026
 
+Latest retrieval milestone: all 10,348 document chunks indexed. Document search
+now uses bounded cosine candidates (100) with the existing HNSW index instead of
+the 2,000-row exact-scan failure. 151 offline/loopback tests and seven existing
+live checks passed; three unscoped index/recall smoke checks passed (100%, 93%,
+100% overlap with exact top-100). See RETRIEVAL.md. No migrations, analytical SQL,
+generation, persistence enablement, or frontend integration. Broader filtered and
+legal-relevance evaluation, restricted runtime credentials, and the previously
+deferred disposable-PostgreSQL history tests remain gates.
+
 ## 1. Goal and scope
 
 Build an independently deployable FastAPI assistant for the existing Crime Records of India application. It will answer crime-data questions using validated PostgreSQL queries, legal-document questions using retrieval-augmented generation (RAG), and hybrid questions using both. Authenticated users will have persistent, private conversations that remain available when they return.
