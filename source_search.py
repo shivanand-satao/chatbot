@@ -57,20 +57,26 @@ def search(db, question, document_id=None):
         hits = db.execute('''WITH query AS (
             SELECT string_agg(plainto_tsquery('simple',term)::text,' | ')::tsquery AS q
             FROM unnest(%s::text[]) AS term)
-            SELECT c.id,c.document_id,d.title,d.version_label,c.page_start,c.page_end,
+            , ranked AS (SELECT c.id,c.document_id,d.title,d.version_label,c.page_start,c.page_end,
                 c.section_reference,c.revision,left(c.original_text,3500) AS passage,
-                length(c.original_text)>3500 AS excerpt_truncated
+                length(c.original_text)>3500 AS excerpt_truncated,
+                ts_rank_cd(to_tsvector('simple',c.original_text),query.q) AS score,
+                row_number() OVER (PARTITION BY c.document_id ORDER BY
+                    ts_rank_cd(to_tsvector('simple',c.original_text),query.q) DESC,c.id) AS document_rank
             FROM chatbot.document_chunks c JOIN chatbot.documents d ON d.id=c.document_id
             CROSS JOIN query
             WHERE c.status='ready' AND c.content_hash=c.embedded_content_hash
               AND (%s::bigint IS NULL OR c.document_id=%s)
               AND to_tsvector('simple',c.original_text) @@ query.q
-            ORDER BY ts_rank_cd(to_tsvector('simple',c.original_text),query.q) DESC,c.id
-            LIMIT 5''', (terms, document_id, document_id)).fetchall()
+            ) SELECT id,document_id,title,version_label,page_start,page_end,
+                section_reference,revision,passage,excerpt_truncated FROM ranked
+            WHERE document_rank <= 2 ORDER BY document_rank,score DESC,id
+            LIMIT 8''', (terms, document_id, document_id)).fetchall()
     for hit in hits:
         hit['source_id'] = f"document:{hit['document_id']}:chunk:{hit['id']}:revision:{hit['revision']}"
     return {'question': question.strip(), 'status': 'candidate_passages' if hits else 'no_matches',
             'method': 'keyword_search', 'terms': terms, 'hits': hits,
+            'search_scope': 'all_documents' if document_id is None else 'selected_document',
             'answer_generated': False, 'generation_allowed': False,
             'notice': 'Keyword matches are source candidates, not verified answers. '
                       'Editions may include historical texts or introduced bills, not current law. '

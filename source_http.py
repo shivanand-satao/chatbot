@@ -10,8 +10,9 @@ from source_search import document_list, search, search_connection
 
 
 class SourceHTTP:
-    def __init__(self, verifier, dsn, responder):
+    def __init__(self, verifier, dsn, responder, explainer=None):
         self.verifier, self.dsn, self.respond = verifier, dsn, responder
+        self.explainer = explainer
         self.slots = threading.BoundedSemaphore(2)
 
     def __call__(self, env, start):
@@ -46,6 +47,9 @@ class SourceHTTP:
                 search_terms(args.get('question'))
                 with search_connection(self.dsn) as db:
                     data = search(db, args['question'], args.get('document_id'))
+                # Release the DB connection before the bounded provider request.
+                from source_explanation import add_explanation
+                data = add_explanation(data, self.explainer)
             else:
                 return error('405 Method Not Allowed', 'method_not_allowed')
             return self.respond(start, '200 OK', {'success': True, 'data': data})

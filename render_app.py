@@ -53,7 +53,12 @@ def create_app(settings=None):
         dsn = settings.get('retrieval_db_url', '')
         if not dsn or dsn.startswith('REPLACE_'):
             raise ValueError('Restricted source-search credential required')
-        sources = SourceHTTP(verifier, dsn, response)
+        explainer = None
+        if settings.get('groq_api'):
+            from source_explanation import SourceExplainer
+            explainer = SourceExplainer(settings['groq_api'],
+                                        settings.get('GROQ_MODEL', 'openai/gpt-oss-120b'))
+        sources = SourceHTTP(verifier, dsn, response, explainer)
     analytics = None
     if flags['ANALYTICS_ENABLED']:
         from analytics_http import AnalyticsHTTP
