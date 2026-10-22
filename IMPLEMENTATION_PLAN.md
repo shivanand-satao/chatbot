@@ -11,6 +11,13 @@ generation, persistence enablement, or frontend integration. Broader filtered an
 legal-relevance evaluation, restricted runtime credentials, and the previously
 deferred disposable-PostgreSQL history tests remain gates.
 
+Expanded evidence evaluation: 25 read-only live cases passed across all six PDFs
+(document/version/stored-section self-retrieval, absent scopes, and unscoped
+context boundaries). 155 offline/loopback tests passed. Unsupported questions
+still retrieve neighbors; no relevance/answerability or injection-defense claim
+is made. See RETRIEVAL.md and evaluate_document_retrieval.py. Independent relevance
+labels and filtered ANN-vs-exact evaluation remain pending before answer generation.
+
 ## 1. Goal and scope
 
 Build an independently deployable FastAPI assistant for the existing Crime Records of India application. It will answer crime-data questions using validated PostgreSQL queries, legal-document questions using retrieval-augmented generation (RAG), and hybrid questions using both. Authenticated users will have persistent, private conversations that remain available when they return.

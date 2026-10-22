@@ -2,6 +2,38 @@
 
 ## October 22, 2026: indexed document retrieval
 
+### Expanded filter and evidence-boundary evaluation
+
+`D:\cc\chatbot\evaluate_document_retrieval.py` adds 25 read-only live cases:
+document, version, and stored-section filtered self-retrieval across each of the
+six uploaded PDFs (18 cases), nonexistent document/version/section scopes (three),
+and four unscoped English/Hindi/unsupported/instruction-like queries. All 25 passed
+their explicit filter/provenance/context-boundary assertions. The selected version
+labels happen to identify single documents in this collection; this is not an
+assumption that arbitrary future version labels are unique.
+
+Each positive filtered case checks source IDs, unchanged edition identity, seed
+presence in the top ten, bounded context, no generation, and citation identity
+without claiming factual entailment. Seeds are automatically selected source
+excerpts, not independently authored questions or relevance labels. Stored section
+references are extraction labels, not verified article/section resolution. These
+checks do not measure filtered ANN recall against exact candidates.
+
+Unsupported and instruction-like queries still return five nearest neighbors.
+Both sampled results spanned documents and triggered document_selection_required;
+this is not rejection of the question or proof of prompt-injection resistance.
+A single-document irrelevant result could still assemble candidate_context.
+An evaluated answerability gate remains required before live generation. No
+similarity-confidence cutoff was introduced from this small sample.
+
+Report: ignored `D:\cc\chatbot\retrieval-output\document-evaluation.json`.
+Four additional offline tests verify evaluation helpers fail on wrong scopes,
+missing seeds and empty positive results. Total suite: 155 tests passing.
+
+```powershell
+& 'D:\cc\chatbot\.venv\Scripts\python.exe' 'D:\cc\chatbot\evaluate_document_retrieval.py'
+```
+
 All 10,348 document chunks are now ready. Document retrieval no longer fetches
 an ID-ordered prefix or fails at 2,000 rows. It orders by cosine distance and
 fetches at most 100 compatible ready candidates before lexical/semantic rank
